@@ -1,0 +1,6 @@
+**/*.wav
+**/*.pth
+**/*.csv
+run/
+**/__pycache__
+.mypy_cache
