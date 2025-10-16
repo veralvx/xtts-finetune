@@ -19,4 +19,4 @@ ENV PATH="/xtts/.venv/bin:$PATH"
 
 RUN uv sync --compile-bytecode --frozen
 RUN uv run --with openai-whisper -- python3 -c "import whisper;  whisper.load_model('large'); whisper.load_model('medium'); whisper.load_model('turbo'); whisper.load_model('small')"
-COPY  . .
+COPY . .
