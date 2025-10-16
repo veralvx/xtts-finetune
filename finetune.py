@@ -12,6 +12,8 @@ from TTS.tts.layers.xtts.trainer.gpt_trainer import (
     XttsAudioConfig,
 )
 
+# torch.set_num_threads(os.cpu_count())
+
 LOCAL_MODEL_DIR = (
     "/root/.local/share/tts/tts_models--multilingual--multi-dataset--xtts_v2.0.2"
 )
@@ -65,7 +67,6 @@ def main(device="gpu", mode=None, lang="en"):
     batchgrpsize = 48
     evalmax = 256
     if device == "cpu" or mode == "lowvram":
-        # os.environ["CUDA_VISIBLE_DEVICES"] = ""
         global BATCH_SIZE, GRAD_ACUMM_STEPS
         BATCH_SIZE = 1
         GRAD_ACUMM_STEPS = 252  # Adjust to maintain effective batch size ~252
@@ -98,6 +99,7 @@ def main(device="gpu", mode=None, lang="en"):
     )
     # training parameters config
     config = GPTTrainerConfig(
+        epochs=300,
         output_path=OUT_PATH,
         model_args=model_args,
         run_name=RUN_NAME,
@@ -109,7 +111,8 @@ def main(device="gpu", mode=None, lang="en"):
         batch_size=BATCH_SIZE,
         batch_group_size=batchgrpsize,
         eval_batch_size=BATCH_SIZE,
-        mixed_precision=True if (device == "cpu" or mode == "lowvram") else False,
+        # mixed_precision=True if (device == "cpu" or mode == "lowvram") else False,
+        mixed_precision=True,
         precision="bf16" if (device == "cpu") else "fp16",
         num_loader_workers=0 if (device == "cpu" and mode == "lowvram") else 8,
         eval_split_max_size=evalmax,
@@ -150,13 +153,24 @@ def main(device="gpu", mode=None, lang="en"):
     # init the model from config
     model = GPTTrainer.init_from_config(config)
 
+    full_samples, _ = load_tts_samples(
+        DATASETS_CONFIG_LIST,
+        eval_split=False,
+    )
+
+    total_samples = len(full_samples)
+    if total_samples <= 100:
+        eval_split_size = (1 + 1e-9) / total_samples
+    else:
+        eval_split_size = 0.01
+
     # load training samples
     train_samples, eval_samples = load_tts_samples(
         DATASETS_CONFIG_LIST,
         eval_split=True,
         eval_split_max_size=config.eval_split_max_size,
         # eval_split_size=config.eval_split_size,  # DEFAULT
-        eval_split_size=0.02040816326530613,
+        eval_split_size=eval_split_size,
     )
 
     if mode == "lowvram":
@@ -165,7 +179,6 @@ def main(device="gpu", mode=None, lang="en"):
 
     gc.collect()
 
-    # Define TrainerArgs first
     trainer_args = TrainerArgs(
         restore_path=None,
         skip_train_epoch=False,
@@ -193,6 +206,9 @@ def main(device="gpu", mode=None, lang="en"):
     )
 
     trainer.fit()
+
+    del model, trainer, train_samples, eval_samples
+    gc.collect()
 
 
 if __name__ == "__main__":
