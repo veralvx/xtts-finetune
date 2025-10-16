@@ -1,0 +1,1 @@
+podman run -it --rm --gpus=all -v ./dataset:/xtts/dataset -v ./run:/xtts/run xtts-finetune
