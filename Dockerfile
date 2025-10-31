@@ -1,4 +1,4 @@
-ARG BASE=nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
+ARG BASE=docker.io/nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 FROM ${BASE}
 
 RUN apt-get update && apt-get upgrade -y
